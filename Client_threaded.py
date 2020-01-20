@@ -1,12 +1,12 @@
 __author__ = 'Tomer Gross'
-__date__ = 'January 9th, 2020'
+__date__ = 'January, 2020'
 
 import socket
 
 
 def main():
     host = '127.0.0.1'  # local host IP '127.0.0.1'
-    port = 1010  # define the port on which you want to connect
+    port = 1005  # define the port on which you want to connect
     flag = 0  # used for detecting an empty message
     game_end = 0  # used to detect when game is over
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

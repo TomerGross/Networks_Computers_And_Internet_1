@@ -1,5 +1,5 @@
 __author__ = 'Tomer Gross'
-__date__ = 'January 9th, 2020'
+__date__ = 'January, 2020'
 
 import socket
 from _thread import *
@@ -20,7 +20,6 @@ class Game:
         self._player_money = 0  # how much the player won or lost
         self._finish_game = 0  # flag to finish the game
         self._war_or_surrender = 0  # flag for war / surrender deceleration
-        self._first_card = 0  # first card flag
 
     def get_deck(self):
         return self._deck
@@ -46,14 +45,17 @@ class Game:
     def get_war_or_surrender(self):
         return self._war_or_surrender
 
-    def get_first_card(self):
-        return self._first_card
-
     def set_war_or_surrender(self, wos):
         self._war_or_surrender = wos
 
     def set_first_card(self, fc):
         self._first_card = fc
+
+    def set_player_cards(self, pc):
+        self._player_cards = pc
+
+    def set_finish_game(self, fg):
+        self._finish_game = fg
 
     def inc_round(self):
         self._round_num += 1
@@ -65,9 +67,6 @@ class Game:
         self._player_money -= bet
 
     def take_dealer_card(self):
-        if len(self._deck.get_cards()) <= 3:  # if next round will be only 1 card, game should be over
-            self._finish_game = 1
-
         card = self._deck.get_cards()[0]
         curr_deck = self._deck.get_cards()
         curr_deck.pop(0)  # take card from the deck
@@ -76,9 +75,7 @@ class Game:
         return card
 
     def take_player_card(self):
-
         card = self._deck.get_cards()[0]
-
         curr_deck = self._deck.get_cards()
         curr_deck.pop(0)  # take card from the deck
         self._deck.set_cards(curr_deck)
@@ -104,11 +101,28 @@ class Game:
         curr_deck.pop(0)
         self._deck.set_cards(curr_deck)
 
+    def update_game_progress(self, msg, c):
+
+        if len(self.get_deck().get_cards()) > 1 and self.get_war_or_surrender() == 0:
+            next_card = self.take_player_card()
+            c.send((msg + "\n\nNext card: " + next_card.to_string()).encode())
+        elif len(self.get_deck().get_cards()) > 1 and self.get_war_or_surrender() == 1:
+            c.send(msg.encode())
+        else:
+            self.set_finish_game(1)
+            amount = self.get_player_money()
+            if amount >= 0:  # player has won in the game
+                lose_win = "\n\nGame over\nPlayer won: " + str(amount) + "$\nPlayer is the winner!\nWould you like to play again? (yes/no)"
+            else:  # player has lost in the game because the stack amount is negative
+                lose_win = "\n\nGame over\nPlayer lost: " + str(-amount) + "$\nDealer is the winner!\nWould you like to play again? (yes/no)"
+            c.send((msg + lose_win).encode())
+
 
 class Deck:
 
     def __init__(self):
-        self._cards = []  # holds the cards that currently left in the deck
+
+        self._cards = [] # holds the cards that currently left in the deck
         _card_value = 1
 
         for i in range(1, 14):  # for each card we will match a value (from 1 to 14) while Ace has the biggest value
@@ -171,7 +185,6 @@ def threaded(c):
             if ans == "yes":  # player wants to play again
                 del games[c]
                 games[c] = Game()  # create a new game
-                games[c].set_first_card(1)
                 c.send(("First card: " + games[c].take_player_card().to_string()).encode())  # send first card
             else:  # player wants to leave
                 del games[c]
@@ -197,22 +210,24 @@ def threaded(c):
             del games[c]
             break
 
-        elif str(data) == "s" and games[c].get_war_or_surrender() == 1:  # player surrendered
+        elif str(data) == "s" and games[c].get_war_or_surrender() == 1 and games[c].get_finish_game() == 0:  # player surrendered
             game_in_prog = games[c]
             game_in_prog.set_war_or_surrender(0)
             part_won = game_in_prog.get_last_bet()/2
-            c.send(("Round " + str(game_in_prog.get_round_num()) + " tie breaker:\nPlayer surrendered!\n" + "The bet: " + str(game_in_prog.get_last_bet()) + "$\nPlayer won: " + str(part_won) + "$\nDealer won: " + str(part_won) + "$").encode())
+            msg = "Round " + str(game_in_prog.get_round_num()) + " tie breaker:\nPlayer surrendered!\n" + "The bet: " + str(game_in_prog.get_last_bet()) + "$\nPlayer won: " + str(part_won) + "$\nDealer won: " + str(part_won) + "$"
             game_in_prog.player_lost(part_won)
             game_in_prog.inc_round()
+            game_in_prog.update_game_progress(msg, c)
 
-        elif str(data) == "w" and games[c].get_war_or_surrender() == 1:  # player declared a war!
+        elif str(data) == "w" and games[c].get_war_or_surrender() == 1 and games[c].get_finish_game() == 0:  # player declared a war!
             game_in_prog = games[c]
             game_in_prog.set_war_or_surrender(0)
             msg = ""
 
             if len(game_in_prog.get_deck().get_cards()) < 5:
-                c.send("Not enough cards for a war! this round canceled, no one won!".encode())
+                msg = "Not enough cards for a war! this round canceled, no one won!"
                 game_in_prog.inc_round()
+                game_in_prog.update_game_progress(msg, c)
                 continue
 
             game_in_prog.discard_3_cards()  # discard 3 cards before deal one card for both the player and the dealer
@@ -239,26 +254,17 @@ def threaded(c):
                 game_in_prog.player_lost(new_bet)
                 msg = "Round " + str(game_in_prog.get_round_num()) + " tie breaker:\nGoing to war!\n" + "3 cards were discarded\n" + "Original bet: " + str(original_bet) + "$\nNew bet: " + str(new_bet) + "$\nDealer’s card:" + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string() + "\nDealer won: " + str(new_bet) + "$"
                 game_in_prog.inc_round()
+
             else:  # player card's value equals to the dealer card's value = player won in the war
                 game_in_prog.player_won(new_bet)
                 msg = "Round " + str(game_in_prog.get_round_num()) + " tie breaker:\nGoing to war!\n" + "3 cards were discarded\n" + "Original bet: " + str(original_bet) + "$\nNew bet: " + str(new_bet) + "$\nDealer’s card:" + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string() + "\nPlayer won: " + str(new_bet) + "$"
                 game_in_prog.inc_round()
 
-            if game_in_prog.get_finish_game() == 1:  # in the end of the game, check for the player stack of money
-                amount = game_in_prog.get_player_money()
-                if amount >= 0:  # player has won in the game
-                    lose_win = "\nGame over\nPlayer won: " + str(amount) + "$\nPlayer is the winner!\nWould you like to play again? (yes/no)"
-                else:  # player has lost in the game because the stack amount is negative
-                    lose_win = "\nGame over\nPlayer lost: " + str(-amount) + "$\nDealer is the winner!\nWould you like to play again? (yes/no)"
-
-                c.send((msg + lose_win).encode())
-            else:
-                c.send(msg.encode())
+            game_in_prog.update_game_progress(msg, c)
 
         elif games[c].get_war_or_surrender() == 0 and games[c].get_finish_game() == 0:
             try:
                 game_in_prog = games[c]
-                msg = ""
                 player_bet = float(data)
                 int_part, resident = divmod(player_bet, 1)
                 if resident == 0:  # for print purposes, if the number is actually integer
@@ -270,12 +276,7 @@ def threaded(c):
 
                 game_in_prog.add_last_bet(player_bet)  # remember player's bet
                 dealer_card = game_in_prog.take_dealer_card()  # deal card to the dealer
-
-                if game_in_prog.get_first_card() == 1:
-                    player_card = game_in_prog.get_player_card()  # deal card to the player
-                    game_in_prog.set_first_card(0)
-                else:
-                    player_card = game_in_prog.take_player_card()  # deal card to the player
+                player_card = game_in_prog.get_player_card()  # deal card to the player
 
                 if dealer_card.get_value() > player_card.get_value():  # player card is lower => dealer won in this round
                     msg = "The result of round :" + str(game_in_prog.get_round_num()) + "\nDealer won: " + str(player_bet) + "$\nDealer’s card:" + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string()
@@ -291,16 +292,7 @@ def threaded(c):
                     game_in_prog.set_war_or_surrender(1)
                     msg = "The result of round :" + str(game_in_prog.get_round_num()) + " is a tie!\n" + "Dealer’s card:" + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string() + "\nDo you wish to surrender or go to war? [s/w]"
 
-                if game_in_prog.get_finish_game() == 1:  # in the end of the game, check for the player stack of money
-                    amount = game_in_prog.get_player_money()
-                    if amount >= 0:  # player has won in the game
-                        lose_win = "\nGame over\nPlayer won: " + str(amount) + "$\nPlayer is the winner!\nWould you like to play again? (yes/no)"
-                    else:  # player has lost in the game because the stack amount is negative
-                        lose_win = "\nGame over\nPlayer lost: " + str(-amount) + "$\nDealer is the winner!\nWould you like to play again? (yes/no)"
-
-                    c.send((msg + lose_win).encode())
-                else:
-                    c.send(msg.encode())
+                game_in_prog.update_game_progress(msg, c)
 
             except ValueError:
                 c.send("Incorrect function or incorrect bet type".encode())
@@ -317,7 +309,7 @@ def main():
     global players_online
 
     host = '0.0.0.0'  # bind to anyone
-    port = 1010  # bind on specified port number
+    port = 1005  # bind on specified port number
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((host, port))
@@ -339,7 +331,6 @@ def main():
         print('Connected to :', address[0], ':', address[1])
 
         games[c] = Game()  # create a new game
-        games[c].set_first_card(1)
         c.send(("First card: " + games[c].take_player_card().to_string()).encode())  # send first card
 
         start_new_thread(threaded, (c,))  # start a new thread and return its identifier

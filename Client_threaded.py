@@ -1,5 +1,5 @@
-__author__ = 'Tomer Gross'
-__date__ = 'January, 2020'
+__author__ = 'Tomer Gross 322712753 & Snir Halbi 207456385'
+__date__ = 'January 9th, 2020'
 
 import socket
 

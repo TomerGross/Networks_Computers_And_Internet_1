@@ -1,5 +1,5 @@
 __author__ = 'Tomer Gross'
-__date__ = 'January, 2020'
+__date__ = 'January 9th, 2020'
 
 import socket
 from _thread import *
@@ -247,17 +247,17 @@ def threaded(c):
 
             if dealer_card.get_value() < player_card.get_value():  # player card is higher => player won in the war
                 game_in_prog.player_won(new_bet/2)
-                msg = "Round " + str(game_in_prog.get_round_num()) + " tie breaker:\nGoing to war!\n" + "3 cards were discarded\n" + "Original bet: " + str(original_bet) + "$\nNew bet: " + str(new_bet) + "$\nDealer’s card:" + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string() + "\nPlayer won: " + str(original_bet) + "$"
+                msg = "Round " + str(game_in_prog.get_round_num()) + " tie breaker:\nGoing to war!\n" + "3 cards were discarded\n" + "Original bet: " + str(original_bet) + "$\nNew bet: " + str(new_bet) + "$\nDealer’s card: " + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string() + "\nPlayer won: " + str(original_bet) + "$"
                 game_in_prog.inc_round()
 
             elif dealer_card.get_value() > player_card.get_value():  # player card is lower => dealer won in the war
                 game_in_prog.player_lost(new_bet)
-                msg = "Round " + str(game_in_prog.get_round_num()) + " tie breaker:\nGoing to war!\n" + "3 cards were discarded\n" + "Original bet: " + str(original_bet) + "$\nNew bet: " + str(new_bet) + "$\nDealer’s card:" + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string() + "\nDealer won: " + str(new_bet) + "$"
+                msg = "Round " + str(game_in_prog.get_round_num()) + " tie breaker:\nGoing to war!\n" + "3 cards were discarded\n" + "Original bet: " + str(original_bet) + "$\nNew bet: " + str(new_bet) + "$\nDealer’s card: " + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string() + "\nDealer won: " + str(new_bet) + "$"
                 game_in_prog.inc_round()
 
             else:  # player card's value equals to the dealer card's value = player won in the war
                 game_in_prog.player_won(new_bet)
-                msg = "Round " + str(game_in_prog.get_round_num()) + " tie breaker:\nGoing to war!\n" + "3 cards were discarded\n" + "Original bet: " + str(original_bet) + "$\nNew bet: " + str(new_bet) + "$\nDealer’s card:" + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string() + "\nPlayer won: " + str(new_bet) + "$"
+                msg = "Round " + str(game_in_prog.get_round_num()) + " tie breaker:\nGoing to war!\n" + "3 cards were discarded\n" + "Original bet: " + str(original_bet) + "$\nNew bet: " + str(new_bet) + "$\nDealer’s card: " + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string() + "\nPlayer won: " + str(new_bet) + "$"
                 game_in_prog.inc_round()
 
             game_in_prog.update_game_progress(msg, c)
@@ -279,18 +279,18 @@ def threaded(c):
                 player_card = game_in_prog.get_player_card()  # deal card to the player
 
                 if dealer_card.get_value() > player_card.get_value():  # player card is lower => dealer won in this round
-                    msg = "The result of round :" + str(game_in_prog.get_round_num()) + "\nDealer won: " + str(player_bet) + "$\nDealer’s card:" + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string()
+                    msg = "The result of round :" + str(game_in_prog.get_round_num()) + "\nDealer won: " + str(player_bet) + "$\nDealer’s card: " + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string()
                     game_in_prog.player_lost(player_bet)
                     game_in_prog.inc_round()
 
                 elif dealer_card.get_value() < player_card.get_value():  # player card is higher => player won in this round
-                    msg = "The result of round :" + str(game_in_prog.get_round_num()) + "\nPlayer won: " + str(player_bet) + "$\nDealer’s card:" + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string()
+                    msg = "The result of round :" + str(game_in_prog.get_round_num()) + "\nPlayer won: " + str(player_bet) + "$\nDealer’s card: " + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string()
                     game_in_prog.player_won(player_bet)
                     game_in_prog.inc_round()
 
                 else:  # player card's value equals to the dealer card's value, let the player choose if surrender or go to a war
                     game_in_prog.set_war_or_surrender(1)
-                    msg = "The result of round :" + str(game_in_prog.get_round_num()) + " is a tie!\n" + "Dealer’s card:" + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string() + "\nDo you wish to surrender or go to war? [s/w]"
+                    msg = "The result of round :" + str(game_in_prog.get_round_num()) + " is a tie!\n" + "Dealer’s card: " + dealer_card.to_string() + "\nPlayer’s card: " + player_card.to_string() + "\nDo you wish to surrender or go to war? [s/w]"
 
                 game_in_prog.update_game_progress(msg, c)
 
